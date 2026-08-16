@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import { requireAuth, AuthRequest } from './middleware/auth';
 import { requireRole } from './middleware/requireRole';
+import incidentRoutes from './routes/incidents';
 dotenv.config();
 
 const app = express();
@@ -21,6 +22,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/incidents', incidentRoutes);
 
 app.get('/me', requireAuth, (req: AuthRequest, res) => {
   res.json({
