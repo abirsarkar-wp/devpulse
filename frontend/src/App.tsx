@@ -1,24 +1,51 @@
-import { useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import NewIncident from './pages/NewIncident';
+import IncidentDetails from './pages/IncidentDetails';
 
 function App() {
-  const [status, setStatus] = useState('checking...');
-
-  useEffect(() => {
-    fetch('http://localhost:4000/health')
-      .then((response) => response.json())
-      .then((data) => {
-        setStatus(data.status);
-      })
-      .catch(() => {
-        setStatus('backend not reachable');
-      });
-  }, []);
-
   return (
-    <div>
-      <h1>DevPulse</h1>
-      <p>Backend status: {status}</p>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+
+          <Route path="/signup" element={<Signup />} />
+
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/incidents/new"
+            element={
+            <ProtectedRoute>
+               <NewIncident />
+            </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/incidents/:id"
+            element={
+            <ProtectedRoute>
+              <IncidentDetails />
+            </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
