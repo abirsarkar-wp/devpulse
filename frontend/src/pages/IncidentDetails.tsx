@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,7 +37,6 @@ type Incident = {
 
 export default function IncidentDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [incident, setIncident] = useState<Incident | null>(null);
