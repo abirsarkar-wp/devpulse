@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
+import { getSocket } from '../lib/socket';
 import { useAuth } from '../context/AuthContext';
 
 type User = {
@@ -48,6 +49,8 @@ export default function IncidentDetails() {
   const [actionLoading, setActionLoading] = useState(false);
 
   async function loadIncident() {
+    if (!id) return;
+
     try {
       setLoading(true);
       setError('');
@@ -65,8 +68,40 @@ export default function IncidentDetails() {
     }
   }
 
+  // Initial incident load
   useEffect(() => {
     loadIncident();
+  }, [id]);
+
+  // Socket.io real-time connection
+  useEffect(() => {
+    if (!id) return;
+
+    const socket = getSocket();
+
+    // Join the room for this specific incident
+    socket.emit('join_incident', id);
+
+    // Someone changed the incident status
+    const handleIncidentUpdated = () => {
+      loadIncident();
+    };
+
+    // Someone added a comment
+    const handleCommentAdded = () => {
+      loadIncident();
+    };
+
+    socket.on('incident:updated', handleIncidentUpdated);
+    socket.on('comment:added', handleCommentAdded);
+
+    // Cleanup when leaving the page
+    return () => {
+      socket.emit('leave_incident', id);
+
+      socket.off('incident:updated', handleIncidentUpdated);
+      socket.off('comment:added', handleCommentAdded);
+    };
   }, [id]);
 
   async function updateStatus() {

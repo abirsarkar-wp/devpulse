@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
+import { getIO } from '../lib/socket';
 
 const router = Router();
 
@@ -9,36 +10,42 @@ const router = Router();
 router.use(requireAuth);
 
 // CREATE incident — ADMIN and MEMBER only
-router.post('/', requireRole('ADMIN', 'MEMBER'), async (req: AuthRequest, res: Response) => {
-  try {
-    const { title, description } = req.body;
+router.post(
+  '/',
+  requireRole('ADMIN', 'MEMBER'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { title, description } = req.body;
 
-    if (!title || !description) {
-      return res.status(400).json({ error: 'Title and description are required' });
+      if (!title || !description) {
+        return res
+          .status(400)
+          .json({ error: 'Title and description are required' });
+      }
+
+      const incident = await prisma.incident.create({
+        data: {
+          title,
+          description,
+          createdBy: req.user!.userId,
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          incidentId: incident.id,
+          userId: req.user!.userId,
+          action: 'INCIDENT_CREATED',
+        },
+      });
+
+      res.status(201).json(incident);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
     }
-
-    const incident = await prisma.incident.create({
-      data: {
-        title,
-        description,
-        createdBy: req.user!.userId,
-      },
-    });
-
-    await prisma.auditLog.create({
-      data: {
-        incidentId: incident.id,
-        userId: req.user!.userId,
-        action: 'INCIDENT_CREATED',
-      },
-    });
-
-    res.status(201).json(incident);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
   }
-});
+);
 
 // LIST incidents — everyone (including VIEWER) can read
 router.get('/', async (req: AuthRequest, res: Response) => {
@@ -120,96 +127,129 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 });
 
 // UPDATE status — ADMIN and MEMBER only
-router.patch('/:id/status', requireRole('ADMIN', 'MEMBER'), async (req: AuthRequest, res: Response) => {
-  try {
-    const incidentId = req.params.id as string;
-    const { status } = req.body;
+router.patch(
+  '/:id/status',
+  requireRole('ADMIN', 'MEMBER'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const incidentId = req.params.id as string;
+      const { status } = req.body;
 
-    const validStatuses = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
+      const validStatuses = [
+        'OPEN',
+        'IN_PROGRESS',
+        'RESOLVED',
+        'CLOSED',
+      ];
 
-    if (!status || !validStatuses.includes(status)) {
-      return res.status(400).json({
-        error: `Status must be one of: ${validStatuses.join(', ')}`,
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({
+          error: `Status must be one of: ${validStatuses.join(', ')}`,
+        });
+      }
+
+      const existing = await prisma.incident.findUnique({
+        where: { id: incidentId },
+      });
+
+      if (!existing) {
+        return res.status(404).json({
+          error: 'Incident not found',
+        });
+      }
+
+      const updated = await prisma.incident.update({
+        where: { id: incidentId },
+        data: { status },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          incidentId: updated.id,
+          userId: req.user!.userId,
+          action: `STATUS_CHANGED_TO_${status}`,
+        },
+      });
+
+      // Notify everyone currently viewing this incident
+      getIO()
+        .to(`incident:${incidentId}`)
+        .emit('incident:updated', updated);
+
+      res.json(updated);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({
+        error: 'Internal server error',
       });
     }
-
-    const existing = await prisma.incident.findUnique({
-      where: { id: incidentId },
-    });
-
-    if (!existing) {
-      return res.status(404).json({ error: 'Incident not found' });
-    }
-
-    const updated = await prisma.incident.update({
-      where: { id: incidentId },
-      data: { status },
-    });
-
-    await prisma.auditLog.create({
-      data: {
-        incidentId: updated.id,
-        userId: req.user!.userId,
-        action: `STATUS_CHANGED_TO_${status}`,
-      },
-    });
-
-    res.json(updated);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
   }
-});
+);
 
 // ADD comment — ADMIN and MEMBER only (VIEWER read-only)
-router.post('/:id/comments', requireRole('ADMIN', 'MEMBER'), async (req: AuthRequest, res: Response) => {
-  try {
-    const incidentId = req.params.id as string;
-    const { content } = req.body;
+router.post(
+  '/:id/comments',
+  requireRole('ADMIN', 'MEMBER'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const incidentId = req.params.id as string;
+      const { content } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ error: 'Comment content is required' });
-    }
+      if (!content) {
+        return res.status(400).json({
+          error: 'Comment content is required',
+        });
+      }
 
-    const incident = await prisma.incident.findUnique({
-      where: { id: incidentId },
-    });
+      const incident = await prisma.incident.findUnique({
+        where: { id: incidentId },
+      });
 
-    if (!incident) {
-      return res.status(404).json({ error: 'Incident not found' });
-    }
+      if (!incident) {
+        return res.status(404).json({
+          error: 'Incident not found',
+        });
+      }
 
-    const comment = await prisma.comment.create({
-      data: {
-        incidentId: incidentId,
-        userId: req.user!.userId,
-        content,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            role: true,
+      const comment = await prisma.comment.create({
+        data: {
+          incidentId,
+          userId: req.user!.userId,
+          content,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              role: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        incidentId: incidentId,
-        userId: req.user!.userId,
-        action: 'COMMENT_ADDED',
-      },
-    });
+      await prisma.auditLog.create({
+        data: {
+          incidentId,
+          userId: req.user!.userId,
+          action: 'COMMENT_ADDED',
+        },
+      });
 
-    res.status(201).json(comment);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+      // Notify everyone currently viewing this incident
+      getIO()
+        .to(`incident:${incidentId}`)
+        .emit('comment:added', comment);
+
+      res.status(201).json(comment);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({
+        error: 'Internal server error',
+      });
+    }
   }
-});
+);
 
 // LIST comments — everyone can read
 router.get('/:id/comments', async (req: AuthRequest, res: Response) => {
@@ -217,7 +257,7 @@ router.get('/:id/comments', async (req: AuthRequest, res: Response) => {
     const incidentId = req.params.id as string;
 
     const comments = await prisma.comment.findMany({
-      where: { incidentId: incidentId },
+      where: { incidentId },
       orderBy: { createdAt: 'asc' },
       include: {
         user: {
@@ -233,7 +273,9 @@ router.get('/:id/comments', async (req: AuthRequest, res: Response) => {
     res.json(comments);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      error: 'Internal server error',
+    });
   }
 });
 
