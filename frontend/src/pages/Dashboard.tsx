@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { LoadingState, ErrorState } from '../components/StatusMessage';
 
 type Incident = {
   id: string;
@@ -46,6 +47,16 @@ export default function Dashboard() {
 
     loadIncidents();
   }, [status]);
+
+  // Consistent loading state
+  if (loading) {
+    return <LoadingState message="Loading incidents..." />;
+  }
+
+  // Consistent error state
+  if (error) {
+    return <ErrorState message="Failed to load incidents." />;
+  }
 
   return (
     <div>
@@ -94,15 +105,11 @@ export default function Dashboard() {
 
       <br />
 
-      {loading && <p>Loading incidents...</p>}
-
-      {error && <p>{error}</p>}
-
-      {!loading && !error && incidents.length === 0 && (
+      {incidents.length === 0 && (
         <p>No incidents found.</p>
       )}
 
-      {!loading && !error && incidents.length > 0 && (
+      {incidents.length > 0 && (
         <div>
           {incidents.map((incident) => (
             <div
@@ -126,7 +133,8 @@ export default function Dashboard() {
               </p>
 
               <p>
-                Created: {new Date(incident.createdAt).toLocaleString()}
+                Created:{' '}
+                {new Date(incident.createdAt).toLocaleString()}
               </p>
 
               <Link to={`/incidents/${incident.id}`}>

@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import api from '../lib/api';
 import { getSocket } from '../lib/socket';
 import { useAuth } from '../context/AuthContext';
-
+import { LoadingState, ErrorState } from '../components/StatusMessage';
 type User = {
   id: string;
   email: string;
@@ -149,21 +149,24 @@ export default function IncidentDetails() {
   }
 
   if (loading) {
-    return <p>Loading incident...</p>;
-  }
+  return <LoadingState message="Loading incident..." />;
+}
 
-  if (error && !incident) {
-    return (
-      <div>
-        <p>{error}</p>
+if (error && !incident) {
+  return (
+    <div>
+      <ErrorState message={error} />
+
+      <div style={{ textAlign: 'center' }}>
         <Link to="/dashboard">Back to dashboard</Link>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  if (!incident) {
-    return <p>Incident not found.</p>;
-  }
+if (!incident) {
+  return <ErrorState message="Incident not found." />;
+}
 
   return (
     <div>

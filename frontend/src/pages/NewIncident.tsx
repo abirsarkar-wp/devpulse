@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function NewIncident() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  // VIEWER users are not allowed to create incidents
+  if (user?.role === 'VIEWER') {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -41,6 +48,7 @@ export default function NewIncident() {
         <div>
           <label>Title</label>
           <br />
+
           <input
             type="text"
             value={title}
@@ -54,6 +62,7 @@ export default function NewIncident() {
         <div>
           <label>Description</label>
           <br />
+
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
