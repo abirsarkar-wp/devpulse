@@ -47,6 +47,15 @@ model Incident {
 
   comments  Comment[]
   auditLogs AuditLog[]
+  note      IncidentNote?
+}
+
+model IncidentNote {
+  id         String   @id @default(uuid())
+  incidentId String   @unique
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  state      String
+  updatedAt  DateTime @updatedAt
 }
 
 model Comment {
