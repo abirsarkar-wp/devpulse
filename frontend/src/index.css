@@ -1,1 +1,37 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ink: #14171C;
+  --color-paper: #F6F4EF;
+  --color-paper-raised: #FFFFFF;
+
+  --color-signal-critical: #D14C3F;
+  --color-signal-progress: #D89A3C;
+  --color-signal-resolved: #3F8F6F;
+  --color-steel: #878C96;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+body {
+  margin: 0;
+  background-color: #F6F4EF;
+  font-family: "Inter", sans-serif;
+}
+
+@keyframes pulse-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+*:focus-visible {
+  outline: 2px solid #14171C;
+  outline-offset: 2px;
+}

@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { getSocket } from '../lib/socket';
 import { useAuth } from '../context/AuthContext';
 import { LoadingState, ErrorState } from '../components/StatusMessage';
+
 type User = {
   id: string;
   email: string;
@@ -35,6 +36,40 @@ type Incident = {
   comments: Comment[];
   auditLogs: AuditLog[];
 };
+
+function getStatusClasses(status: string) {
+  switch (status) {
+    case 'OPEN':
+      return {
+        badge: 'bg-signal-critical/10 text-signal-critical border-signal-critical/20',
+        dot: 'bg-signal-critical',
+      };
+
+    case 'IN_PROGRESS':
+      return {
+        badge: 'bg-signal-progress/10 text-signal-progress border-signal-progress/20',
+        dot: 'bg-signal-progress',
+      };
+
+    case 'RESOLVED':
+      return {
+        badge: 'bg-signal-resolved/10 text-signal-resolved border-signal-resolved/20',
+        dot: 'bg-signal-resolved',
+      };
+
+    case 'CLOSED':
+      return {
+        badge: 'bg-steel/10 text-steel border-steel/20',
+        dot: 'bg-steel',
+      };
+
+    default:
+      return {
+        badge: 'bg-steel/10 text-steel border-steel/20',
+        dot: 'bg-steel',
+      };
+  }
+}
 
 export default function IncidentDetails() {
   const { id } = useParams();
@@ -68,26 +103,22 @@ export default function IncidentDetails() {
     }
   }
 
-  // Initial incident load
   useEffect(() => {
     loadIncident();
   }, [id]);
 
-  // Socket.io real-time connection
+  // Real-time Socket.io updates
   useEffect(() => {
     if (!id) return;
 
     const socket = getSocket();
 
-    // Join the room for this specific incident
     socket.emit('join_incident', id);
 
-    // Someone changed the incident status
     const handleIncidentUpdated = () => {
       loadIncident();
     };
 
-    // Someone added a comment
     const handleCommentAdded = () => {
       loadIncident();
     };
@@ -95,7 +126,6 @@ export default function IncidentDetails() {
     socket.on('incident:updated', handleIncidentUpdated);
     socket.on('comment:added', handleCommentAdded);
 
-    // Cleanup when leaving the page
     return () => {
       socket.emit('leave_incident', id);
 
@@ -137,7 +167,6 @@ export default function IncidentDetails() {
       });
 
       setComment('');
-
       await loadIncident();
     } catch (err: any) {
       setError(
@@ -149,144 +178,255 @@ export default function IncidentDetails() {
   }
 
   if (loading) {
-  return <LoadingState message="Loading incident..." />;
-}
+    return <LoadingState message="Loading incident..." />;
+  }
 
-if (error && !incident) {
-  return (
-    <div>
-      <ErrorState message={error} />
+  if (error && !incident) {
+    return <ErrorState message={error} />;
+  }
 
-      <div style={{ textAlign: 'center' }}>
-        <Link to="/dashboard">Back to dashboard</Link>
-      </div>
-    </div>
-  );
-}
+  if (!incident) {
+    return <ErrorState message="Incident not found." />;
+  }
 
-if (!incident) {
-  return <ErrorState message="Incident not found." />;
-}
+  const statusStyle = getStatusClasses(incident.status);
 
   return (
-    <div>
-      <h1>Incident Details</h1>
-
-      <Link to="/dashboard">← Back to dashboard</Link>
-
-      <hr />
-
-      <h2>{incident.title}</h2>
-
-      <p>{incident.description}</p>
-
-      <p>
-        <strong>Status:</strong> {incident.status}
-      </p>
-
-      <p>
-        <strong>Created by:</strong> {incident.creator.email}
-      </p>
-
-      <p>
-        <strong>Created:</strong>{' '}
-        {new Date(incident.createdAt).toLocaleString()}
-      </p>
-
-      <hr />
-
-      {user?.role !== 'VIEWER' && (
-        <div>
-          <h3>Update Status</h3>
-
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
+    <div className="min-h-screen bg-paper">
+      <header className="bg-ink text-white">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link
+            to="/dashboard"
+            className="font-display font-semibold text-lg tracking-tight"
           >
-            <option value="OPEN">Open</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="RESOLVED">Resolved</option>
-            <option value="CLOSED">Closed</option>
-          </select>
+            DevPulse
+          </Link>
 
-          <button
-            onClick={updateStatus}
-            disabled={actionLoading}
-          >
-            Update Status
-          </button>
-        </div>
-      )}
-
-      <hr />
-
-      <h3>Comments</h3>
-
-      {incident.comments.length === 0 ? (
-        <p>No comments yet.</p>
-      ) : (
-        incident.comments.map((item) => (
-          <div
-            key={item.id}
-            style={{
-              border: '1px solid #ccc',
-              padding: '10px',
-              marginBottom: '10px',
-            }}
-          >
-            <p>{item.content}</p>
-
-            <small>
-              {item.user.email} —{' '}
-              {new Date(item.createdAt).toLocaleString()}
-            </small>
+          <div className="font-mono text-xs text-white/60">
+            {user?.email} · {user?.role}
           </div>
-        ))
-      )}
-
-      {user?.role !== 'VIEWER' && (
-        <div>
-          <h3>Add Comment</h3>
-
-          <textarea
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-            rows={4}
-            placeholder="Write a comment..."
-          />
-
-          <br />
-
-          <button
-            onClick={addComment}
-            disabled={actionLoading || !comment.trim()}
-          >
-            Add Comment
-          </button>
         </div>
-      )}
+      </header>
 
-      {error && <p>{error}</p>}
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        <Link
+          to="/dashboard"
+          className="font-mono text-xs text-steel hover:text-ink transition"
+        >
+          ← Back to dashboard
+        </Link>
 
-      <hr />
+        <section className="mt-6 bg-paper-raised border border-black/5 rounded-lg shadow-sm p-6">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-steel mb-2">
+                Incident
+              </p>
 
-      <h3>Audit Log</h3>
+              <h1 className="font-display text-2xl font-semibold text-ink">
+                {incident.title}
+              </h1>
 
-      {incident.auditLogs.length === 0 ? (
-        <p>No audit logs.</p>
-      ) : (
-        incident.auditLogs.map((log) => (
-          <div key={log.id}>
-            <p>
-              <strong>{log.action}</strong>
-              {' — '}
-              {log.user.email}
-              {' — '}
-              {new Date(log.createdAt).toLocaleString()}
-            </p>
+              <p className="mt-3 text-sm text-steel leading-relaxed max-w-3xl">
+                {incident.description}
+              </p>
+            </div>
+
+            <div
+              className={`inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full border text-xs font-medium ${statusStyle.badge}`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${statusStyle.dot}`}
+              />
+              {incident.status.replace('_', ' ')}
+            </div>
           </div>
-        ))
-      )}
+
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-steel">
+                Created by
+              </p>
+
+              <p className="font-mono text-xs text-ink mt-1">
+                {incident.creator.email}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-steel">
+                Created
+              </p>
+
+              <p className="font-mono text-xs text-ink mt-1">
+                {new Date(incident.createdAt).toLocaleString()}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-steel">
+                Last updated
+              </p>
+
+              <p className="font-mono text-xs text-ink mt-1">
+                {new Date(incident.updatedAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {user?.role !== 'VIEWER' && (
+          <section className="mt-6 bg-paper-raised border border-black/5 rounded-lg shadow-sm p-6">
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <div className="flex-1">
+                <p className="font-display font-semibold text-sm text-ink">
+                  Update status
+                </p>
+
+                <p className="text-xs text-steel mt-1">
+                  Change the current incident state.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value)}
+                  className="border border-black/10 rounded px-3 py-2 text-sm bg-paper-raised text-ink"
+                >
+                  <option value="OPEN">Open</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="RESOLVED">Resolved</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
+
+                <button
+                  onClick={updateStatus}
+                  disabled={actionLoading}
+                  className="bg-ink text-white text-sm font-medium px-4 py-2 rounded hover:bg-ink/90 transition disabled:opacity-50"
+                >
+                  {actionLoading ? 'Updating...' : 'Update'}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display font-semibold text-lg text-ink">
+              Activity
+            </h2>
+
+            <span className="font-mono text-[10px] uppercase tracking-widest text-steel">
+              {incident.auditLogs.length} events
+            </span>
+          </div>
+
+          <div className="relative">
+            <div className="absolute left-3 top-0 bottom-0 w-px bg-black/10" />
+
+            <div className="space-y-5">
+              {incident.auditLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="relative pl-10"
+                >
+                  <span className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-paper border border-black/10 flex items-center justify-center">
+                    <span className="w-2 h-2 rounded-full bg-ink" />
+                  </span>
+
+                  <div className="bg-paper-raised border border-black/5 rounded-md p-4">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                      <p className="font-mono text-xs font-medium text-ink">
+                        {log.action}
+                      </p>
+
+                      <span className="font-mono text-[10px] text-steel">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-steel mt-2">
+                      Performed by{' '}
+                      <span className="font-mono text-ink">
+                        {log.user.email}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-8">
+          <h2 className="font-display font-semibold text-lg text-ink mb-4">
+            Comments
+          </h2>
+
+          <div className="space-y-3">
+            {incident.comments.length === 0 ? (
+              <div className="bg-paper-raised border border-black/5 rounded-md p-5">
+                <p className="text-sm text-steel italic">
+                  No comments yet.
+                </p>
+              </div>
+            ) : (
+              incident.comments.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-paper-raised border border-black/5 rounded-md p-4"
+                >
+                  <p className="text-sm text-ink leading-relaxed">
+                    {item.content}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-x-2 gap-y-1 font-mono text-[10px] text-steel">
+                    <span>{item.user.email}</span>
+                    <span>·</span>
+                    <span>
+                      {new Date(item.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {user?.role !== 'VIEWER' && (
+            <div className="mt-5 bg-paper-raised border border-black/5 rounded-lg shadow-sm p-5">
+              <p className="font-display font-semibold text-sm text-ink mb-2">
+                Add comment
+              </p>
+
+              <textarea
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+                rows={4}
+                placeholder="Describe what happened or what was done..."
+                className="w-full border border-black/10 rounded-md bg-paper-raised text-ink text-sm px-3 py-3 resize-y focus:outline-none"
+              />
+
+              <div className="mt-3 flex justify-end">
+                <button
+                  onClick={addComment}
+                  disabled={actionLoading || !comment.trim()}
+                  className="bg-ink text-white text-sm font-medium px-4 py-2 rounded hover:bg-ink/90 transition disabled:opacity-50"
+                >
+                  {actionLoading ? 'Adding...' : 'Add Comment'}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {error && (
+          <div className="mt-6 border border-signal-critical/20 bg-signal-critical/5 text-signal-critical rounded-md px-4 py-3 text-sm">
+            {error}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

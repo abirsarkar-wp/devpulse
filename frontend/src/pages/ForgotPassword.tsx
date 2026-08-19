@@ -1,26 +1,46 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import api from '../lib/api';
 
-export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-
-  const { login } = useAuth();
+export default function ForgotPassword() {
   const navigate = useNavigate();
+
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+
     setError('');
+    setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const response = await api.post('/auth/forgot-password', {
+        email,
+      });
+
+      const resetToken = response.data.resetToken;
+
+      if (resetToken) {
+        navigate(
+          `/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(resetToken)}`
+        );
+        return;
+      }
+
+      setError(
+        response.data.message ||
+          'Unable to create password reset request.'
+      );
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(
+        err.response?.data?.error ||
+          'Unable to process password reset request.'
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -41,9 +61,13 @@ export default function Login() {
           onSubmit={handleSubmit}
           className="bg-paper-raised rounded-lg shadow-sm border border-black/5 p-6"
         >
-          <h2 className="font-display font-semibold text-base text-ink mb-4">
-            Log in
+          <h2 className="font-display font-semibold text-base text-ink mb-2">
+            Forgot password?
           </h2>
+
+          <p className="text-xs text-steel mb-5">
+            Enter your account email to request a password reset.
+          </p>
 
           {error && (
             <p className="text-signal-critical text-xs font-mono mb-4 bg-signal-critical/10 px-3 py-2 rounded">
@@ -59,45 +83,25 @@ export default function Login() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full border border-black/10 rounded px-3 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
+            className="w-full border border-black/10 rounded px-3 py-2 mb-5 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
             required
           />
 
-          <label className="block text-xs font-medium text-steel mb-1">
-            Password
-          </label>
-
-          <div className="relative mb-5">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full border border-black/10 rounded px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
-              required
-            />
-
-            <button
-              type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-steel hover:text-ink transition"
-            >
-              {showPassword ? 'Hide' : 'Show'}
-            </button>
-          </div>
-
           <button
             type="submit"
-            className="w-full bg-ink text-white rounded py-2 text-sm font-medium hover:bg-ink/90 transition"
+            disabled={loading}
+            className="w-full bg-ink text-white rounded py-2 text-sm font-medium hover:bg-ink/90 transition disabled:opacity-50"
           >
-            Log in
+            {loading ? 'Processing...' : 'Continue'}
           </button>
 
           <p className="text-xs text-steel mt-4 text-center">
+            Remember your password?{' '}
             <Link
-              to="/forgot-password"
+              to="/login"
               className="text-ink font-medium hover:underline"
             >
-              Forgot password?
+              Log in
             </Link>
           </p>
         </form>

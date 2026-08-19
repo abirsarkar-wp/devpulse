@@ -6,6 +6,7 @@ import {
   afterAll,
 } from 'vitest';
 
+import bcrypt from 'bcrypt';
 import request from 'supertest';
 import express from 'express';
 
@@ -27,21 +28,14 @@ const memberEmail = `member-test-${Date.now()}@devpulse.com`;
 
 describe('Role-based access control', () => {
   beforeAll(async () => {
-    // Create VIEWER test user
-    const viewerSignup = await request(app)
-      .post('/auth/signup')
-      .send({
+    const passwordHash = await bcrypt.hash('password123', 10);
+
+    const viewer = await prisma.user.create({
+      data: {
         email: viewerEmail,
-        password: 'password123',
-      });
-
-    expect(viewerSignup.status).toBe(201);
-
-    const viewerId = viewerSignup.body.user.id;
-
-    await prisma.user.update({
-      where: { id: viewerId },
-      data: { role: 'VIEWER' },
+        passwordHash,
+        role: 'VIEWER',
+      },
     });
 
     // Login as VIEWER
@@ -56,21 +50,12 @@ describe('Role-based access control', () => {
 
     viewerToken = viewerLogin.body.accessToken;
 
-    // Create a MEMBER test user
-    const memberSignup = await request(app)
-      .post('/auth/signup')
-      .send({
+    const member = await prisma.user.create({
+      data: {
         email: memberEmail,
-        password: 'password123',
-      });
-
-    expect(memberSignup.status).toBe(201);
-
-    const memberId = memberSignup.body.user.id;
-
-    await prisma.user.update({
-      where: { id: memberId },
-      data: { role: 'MEMBER' },
+        passwordHash,
+        role: 'MEMBER',
+      },
     });
 
     // Create test incident using MEMBER
@@ -78,7 +63,7 @@ describe('Role-based access control', () => {
       data: {
         title: 'RBAC Test Incident',
         description: 'Incident created for RBAC testing',
-        createdBy: memberId,
+        createdBy: member.id,
       },
     });
 

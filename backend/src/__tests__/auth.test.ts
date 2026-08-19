@@ -2,9 +2,11 @@ import {
   describe,
   it,
   expect,
+  beforeAll,
   afterAll,
 } from 'vitest';
 
+import bcrypt from 'bcrypt';
 import request from 'supertest';
 import express from 'express';
 
@@ -19,20 +21,18 @@ app.use('/auth', authRoutes);
 const testEmail = `test-${Date.now()}@devpulse.com`;
 
 describe('Auth routes', () => {
-  it('should sign up a new user', async () => {
-    const res = await request(app)
-      .post('/auth/signup')
-      .send({
-        email: testEmail,
-        password: 'password123',
-      });
+  beforeAll(async () => {
+    const passwordHash = await bcrypt.hash('password123', 10);
 
-    expect(res.status).toBe(201);
-    expect(res.body.user.email).toBe(testEmail);
-    expect(res.body.accessToken).toBeDefined();
+    await prisma.user.create({
+      data: {
+        email: testEmail,
+        passwordHash,
+      },
+    });
   });
 
-  it('should reject duplicate signup', async () => {
+  it('should not expose the signup endpoint', async () => {
     const res = await request(app)
       .post('/auth/signup')
       .send({
@@ -40,7 +40,15 @@ describe('Auth routes', () => {
         password: 'password123',
       });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(404);
+  });
+
+  it('should reject login with missing credentials', async () => {
+    const res = await request(app)
+      .post('/auth/login')
+      .send({});
+
+    expect(res.status).toBe(400);
   });
 
   it('should login with correct credentials', async () => {
