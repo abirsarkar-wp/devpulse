@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { LoadingState } from './StatusMessage';
 
 export default function ProtectedRoute({
   children,
@@ -9,7 +10,7 @@ export default function ProtectedRoute({
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingState message="Restoring secure session..." />;
   }
 
   if (!user) {

@@ -4,34 +4,32 @@
   --color-ink: #14171C;
   --color-paper: #F6F4EF;
   --color-paper-raised: #FFFFFF;
-
   --color-signal-critical: #D14C3F;
   --color-signal-progress: #D89A3C;
   --color-signal-resolved: #3F8F6F;
   --color-steel: #878C96;
-
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
 
-body {
-  margin: 0;
-  background-color: #F6F4EF;
-  font-family: "Inter", sans-serif;
-}
-
-@keyframes pulse-scroll {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-*:focus-visible {
-  outline: 2px solid #14171C;
-  outline-offset: 2px;
-}
+:root { color: #14171C; background: #F6F4EF; font-family: "Inter", ui-sans-serif, system-ui, sans-serif; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #F6F4EF; text-rendering: optimizeLegibility; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+.technical-grid { background-image: linear-gradient(rgb(20 23 28 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(20 23 28 / 0.035) 1px, transparent 1px); background-size: 28px 28px; }
+.ambient-orb { filter: blur(1px); animation: float-orb 12s ease-in-out infinite; }
+.panel-depth { box-shadow: 0 1px 1px rgb(20 23 28 / 0.03), 0 14px 34px rgb(20 23 28 / 0.06); }
+.panel-depth:hover { box-shadow: 0 2px 2px rgb(20 23 28 / 0.04), 0 18px 42px rgb(20 23 28 / 0.09); }
+.hover-card { transform-style: preserve-3d; transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+.hover-card:hover { transform: perspective(1000px) translateY(-4px) rotateX(1deg) rotateY(-1deg); box-shadow: 0 18px 34px rgb(20 23 28 / 0.12); }
+.pulse-glow { animation: soft-pulse 2.4s ease-in-out infinite; }
+.scan-line { animation: scan 5s linear infinite; }
+@keyframes float-orb { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(12px, -16px, 0); } }
+@keyframes soft-pulse { 0%, 100% { opacity: .48; transform: scale(.88); } 50% { opacity: 1; transform: scale(1.12); } }
+@keyframes pulse-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes scan { from { transform: translateX(-115%); } to { transform: translateX(420%); } }
+*:focus-visible { outline: 2px solid #14171C; outline-offset: 3px; }
+::selection { background: rgb(20 23 28 / 0.14); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; } .hover-card:hover { transform: none; } }

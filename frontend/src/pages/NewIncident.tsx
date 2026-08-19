@@ -3,90 +3,12 @@ import type { FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { AppShell } from '../components/AppShell';
 
 export default function NewIncident() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
-  // VIEWER users are not allowed to create incidents
-  if (user?.role === 'VIEWER') {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-
-    setError('');
-    setLoading(true);
-
-    try {
-      const response = await api.post('/incidents', {
-        title,
-        description,
-      });
-
-      navigate(`/incidents/${response.data.id}`);
-    } catch (err: any) {
-      setError(
-        err.response?.data?.error || 'Failed to create incident'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div>
-      <h1>Create New Incident</h1>
-
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Title</label>
-          <br />
-
-          <input
-            type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            required
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label>Description</label>
-          <br />
-
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            required
-            rows={6}
-          />
-        </div>
-
-        <br />
-
-        {error && <p>{error}</p>}
-
-        <button type="submit" disabled={loading}>
-          {loading ? 'Creating...' : 'Create Incident'}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard')}
-          disabled={loading}
-        >
-          Cancel
-        </button>
-      </form>
-    </div>
-  );
+  const { user } = useAuth(); const navigate = useNavigate();
+  const [title, setTitle] = useState(''); const [description, setDescription] = useState(''); const [loading, setLoading] = useState(false); const [error, setError] = useState('');
+  if (user?.role === 'VIEWER') return <Navigate to="/dashboard" replace />;
+  async function handleSubmit(event: FormEvent) { event.preventDefault(); setError(''); setLoading(true); try { const response = await api.post('/incidents', { title, description }); navigate(`/incidents/${response.data.id}`); } catch (err: any) { setError(err.response?.data?.error || 'Failed to create incident'); } finally { setLoading(false); } }
+  return <AppShell><main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:py-12"><button onClick={() => navigate('/dashboard')} className="font-mono text-[10px] uppercase tracking-widest text-steel transition hover:text-ink">← Incident board</button><section className="panel-depth mt-5 rounded-2xl border border-black/5 bg-paper-raised p-6 sm:p-8"><p className="font-mono text-[10px] uppercase tracking-[.22em] text-steel">New response record</p><h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">Create an incident</h1><p className="mt-2 max-w-xl text-sm leading-relaxed text-steel">Record a concise title and enough context for the team to begin an informed response.</p><form onSubmit={handleSubmit} className="mt-8 space-y-5">{error && <p className="rounded-lg bg-signal-critical/10 px-3 py-2 text-sm text-signal-critical">{error}</p>}<div><label htmlFor="incident-title" className="mb-1.5 block text-sm font-medium text-ink">Title</label><input id="incident-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Elevated API error rate" required className="w-full rounded-lg border border-black/10 bg-paper px-3 py-2.5 text-sm outline-none transition focus:border-ink/30 focus:ring-4 focus:ring-ink/8" /><p className="mt-1.5 font-mono text-[10px] text-steel">Make the impact immediately understandable.</p></div><div><label htmlFor="incident-description" className="mb-1.5 block text-sm font-medium text-ink">Initial context</label><textarea id="incident-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What is affected, when did it begin, and what has been observed?" required rows={7} className="w-full resize-y rounded-lg border border-black/10 bg-paper px-3 py-2.5 text-sm leading-relaxed outline-none transition focus:border-ink/30 focus:ring-4 focus:ring-ink/8" /></div><div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end"><button type="button" onClick={() => navigate('/dashboard')} disabled={loading} className="rounded-lg px-4 py-2.5 text-sm text-steel transition hover:bg-black/4 hover:text-ink">Cancel</button><button type="submit" disabled={loading} className="rounded-lg bg-ink px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-ink/15 transition hover:-translate-y-0.5 hover:bg-ink/90 disabled:opacity-50">{loading ? 'Creating incident...' : 'Create incident'}</button></div></form></section></main></AppShell>;
 }

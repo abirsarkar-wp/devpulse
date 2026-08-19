@@ -16,7 +16,7 @@ export function PulseStrip({ openCount }: PulseStripProps) {
     : '0,16 400,16';
 
   return (
-    <div className="relative h-8 overflow-hidden bg-ink border-b border-black/30">
+    <div className="relative h-10 overflow-hidden border-b border-white/10 bg-ink">
       <div
         className="absolute inset-y-0 flex"
         style={{
@@ -28,7 +28,7 @@ export function PulseStrip({ openCount }: PulseStripProps) {
           <svg
             key={i}
             width="50%"
-            height="32"
+            height="40"
             viewBox="0 0 400 32"
             preserveAspectRatio="none"
             className="shrink-0"
@@ -37,14 +37,16 @@ export function PulseStrip({ openCount }: PulseStripProps) {
               points={beatPath}
               fill="none"
               stroke={color}
-              strokeWidth="2"
+              strokeWidth="2.25"
+              style={{ filter: `drop-shadow(0 0 4px ${color})` }}
             />
           </svg>
         ))}
       </div>
 
-      <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none">
-        <span className="font-mono text-[10px] tracking-widest text-white/40 uppercase">
+      <div className="scan-line absolute top-0 h-px w-24 bg-white/50" />
+      <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none sm:px-6">
+        <span className="font-mono text-[10px] tracking-[.2em] text-white/45 uppercase">
           System pulse
         </span>
 

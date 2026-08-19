@@ -2,12 +2,14 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AuthShell } from '../components/AuthShell';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -15,43 +17,29 @@ export default function Login() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError('');
+    setLoading(true);
 
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-paper px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-6">
-          <h1 className="font-display font-semibold text-2xl text-ink tracking-tight">
-            DevPulse
-          </h1>
-
-          <p className="font-mono text-[10px] text-steel uppercase tracking-widest mt-1">
-            Incident Response
-          </p>
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="bg-paper-raised rounded-lg shadow-sm border border-black/5 p-6"
-        >
-          <h2 className="font-display font-semibold text-base text-ink mb-4">
-            Log in
-          </h2>
+    <AuthShell title="Incident response console"><form onSubmit={handleSubmit} className="panel-depth rounded-2xl border border-white/60 bg-paper-raised p-6 sm:p-8">
+          <h2 className="font-display text-xl font-semibold text-ink">Welcome back</h2><p className="mt-1 text-sm text-steel">Sign in to access the live incident board.</p>
 
           {error && (
-            <p className="text-signal-critical text-xs font-mono mb-4 bg-signal-critical/10 px-3 py-2 rounded">
+            <p className="mt-5 rounded-lg bg-signal-critical/10 px-3 py-2 font-mono text-xs text-signal-critical">
               {error}
             </p>
           )}
 
-          <label className="block text-xs font-medium text-steel mb-1">
+          <label className="mt-5 block text-xs font-medium text-steel mb-1.5">
             Email
           </label>
 
@@ -59,20 +47,20 @@ export default function Login() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full border border-black/10 rounded px-3 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
+            className="w-full rounded-lg border border-black/10 bg-white px-3 py-2.5 text-sm transition focus:border-ink/30 focus:outline-none focus:ring-4 focus:ring-ink/8"
             required
           />
 
-          <label className="block text-xs font-medium text-steel mb-1">
+          <label className="mt-4 block text-xs font-medium text-steel mb-1.5">
             Password
           </label>
 
-          <div className="relative mb-5">
+          <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full border border-black/10 rounded px-3 py-2 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
+              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2.5 pr-16 text-sm transition focus:border-ink/30 focus:outline-none focus:ring-4 focus:ring-ink/8"
               required
             />
 
@@ -85,11 +73,8 @@ export default function Login() {
             </button>
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-ink text-white rounded py-2 text-sm font-medium hover:bg-ink/90 transition"
-          >
-            Log in
+          <button type="submit" disabled={loading} className="mt-5 w-full rounded-lg bg-ink py-2.5 text-sm font-medium text-white shadow-lg shadow-ink/15 transition hover:-translate-y-0.5 hover:bg-ink/90 disabled:opacity-50">
+            {loading ? 'Signing in...' : 'Log in'}
           </button>
 
           <p className="text-xs text-steel mt-4 text-center">
@@ -100,8 +85,6 @@ export default function Login() {
               Forgot password?
             </Link>
           </p>
-        </form>
-      </div>
-    </div>
+        </form></AuthShell>
   );
 }
