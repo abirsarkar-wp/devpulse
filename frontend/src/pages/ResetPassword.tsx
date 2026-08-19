@@ -10,9 +10,7 @@ export default function ResetPassword() {
   const [email, setEmail] = useState(
     searchParams.get('email') || ''
   );
-  const [resetToken, setResetToken] = useState(
-    searchParams.get('token') || ''
-  );
+  const resetToken = searchParams.get('token') || '';
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -73,7 +71,7 @@ export default function ResetPassword() {
           </h2>
 
           <p className="text-xs text-steel mb-5">
-            Enter your reset token and choose a new password.
+            Choose a new password for your account.
           </p>
 
           {error && (
@@ -97,18 +95,6 @@ export default function ResetPassword() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             className="w-full border border-black/10 rounded px-3 py-2 mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-ink/20"
-            required
-          />
-
-          <label className="block text-xs font-medium text-steel mb-1">
-            Reset token
-          </label>
-
-          <input
-            type="text"
-            value={resetToken}
-            onChange={(event) => setResetToken(event.target.value)}
-            className="w-full border border-black/10 rounded px-3 py-2 mb-4 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ink/20"
             required
           />
 
